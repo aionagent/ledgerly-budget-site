@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ledgerly — Household Budget Dashboard</title>
+<meta name="description" content="Ledgerly is a private, offline household budget dashboard: track income and spending, set category budgets, and reach savings goals.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="#dashboard" data-nav="dashboard">
+      <span class="brand-mark" aria-hidden="true">◈</span>
+      <span class="brand-name">Ledgerly</span>
+      <span class="brand-tag">household budget</span>
+    </a>
+    <nav class="mainnav" aria-label="Sections">
+      <a href="#dashboard" data-nav="dashboard" class="active">Dashboard</a>
+      <a href="#transactions" data-nav="transactions">Transactions</a>
+      <a href="#budgets" data-nav="budgets">Budgets</a>
+      <a href="#goals" data-nav="goals">Goals</a>
+    </nav>
+    <div class="month-switch" role="group" aria-label="Month">
+      <button id="prev-month" type="button" aria-label="Previous month">‹</button>
+      <span id="month-label" class="month-label">November 2026</span>
+      <button id="next-month" type="button" aria-label="Next month">›</button>
+      <button id="today-btn" type="button" class="btn btn-ghost btn-small">Today</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- ============ DASHBOARD ============ -->
+  <section id="view-dashboard" class="view active" aria-label="Dashboard">
+    <div class="page-head">
+      <div>
+        <h1>Good evening, household</h1>
+        <p class="lede">Here is where November stands — income, spending, and what is left to save.</p>
+      </div>
+      <div class="head-actions">
+        <button id="add-txn-top" type="button" class="btn btn-primary">+ Add transaction</button>
+        <button id="export-csv" type="button" class="btn">Export CSV</button>
+      </div>
+    </div>
+
+    <div class="cards" id="summary-cards">
+      <article class="card stat">
+        <h2>Income</h2>
+        <p class="stat-value income" id="sum-income">$0.00</p>
+        <p class="stat-sub" id="sum-income-sub">0 entries this month</p>
+      </article>
+      <article class="card stat">
+        <h2>Spending</h2>
+        <p class="stat-value expense" id="sum-expense">$0.00</p>
+        <p class="stat-sub" id="sum-expense-sub">0 entries this month</p>
+      </article>
+      <article class="card stat">
+        <h2>Balance</h2>
+        <p class="stat-value" id="sum-balance">$0.00</p>
+        <p class="stat-sub" id="sum-balance-sub">Income minus spending</p>
+      </article>
+      <article class="card stat">
+        <h2>Savings rate</h2>
+        <p class="stat-value" id="sum-rate">—</p>
+        <p class="stat-sub" id="sum-rate-sub">Share of income kept</p>
+      </article>
+    </div>
+
+    <div id="budget-alert" class="alert hidden" role="alert"></div>
+
+    <div class="grid-2">
+      <article class="card">
+        <div class="card-head">
+          <h2>Spending by category</h2>
+          <span class="card-note" id="donut-total"></span>
+        </div>
+        <div class="donut-wrap">
+          <canvas id="donut" width="220" height="220" aria-label="Donut chart of spending by category" role="img"></canvas>
+          <div class="donut-center"><span id="donut-center-value">$0</span><span>spent</span></div>
+        </div>
+        <ul class="legend" id="category-legend"></ul>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Budget at a glance</h2>
+          <a href="#budgets" data-nav="budgets" class="link">Manage budgets ›</a>
+        </div>
+        <div id="budget-glance" class="budget-list"></div>
+        <div class="card-head" style="margin-top:1.4rem">
+          <h2>Savings goals</h2>
+          <a href="#goals" data-nav="goals" class="link">View goals ›</a>
+        </div>
+        <div id="goal-glance"></div>
+      </article>
+    </div>
+
+    <article class="card">
+      <div class="card-head">
+        <h2>Recent transactions</h2>
+        <a href="#transactions" data-nav="transactions" class="link">See all ›</a>
+      </div>
+      <table class="txn-table">
+        <thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="num">Amount</th><th></th></tr></thead>
+        <tbody id="recent-body"></tbody>
+      </table>
+      <p id="recent-empty" class="empty hidden">No transactions this month yet. Add one to get started.</p>
+    </article>
+  </section>
+
+  <!-- ============ TRANSACTIONS ============ -->
+  <section id="view-transactions" class="view" aria-label="Transactions">
+    <div class="page-head">
+      <div>
+        <h1>Transactions</h1>
+        <p class="lede">Every dollar in and out, for the month you are viewing.</p>
+      </div>
+      <div class="head-actions">
+        <button id="add-txn-btn" type="button" class="btn btn-primary">+ Add transaction</button>
+        <button id="clear-sample-btn" type="button" class="btn btn-danger-ghost">Clear sample data</button>
+      </div>
+    </div>
+    <div class="card toolbar">
+      <label>Filter
+        <select id="filter-type">
+          <option value="all">All types</option>
+          <option value="income">Income only</option>
+          <option value="expense">Expenses only</option>
+        </select>
+      </label>
+      <label>Category
+        <select id="filter-category"><option value="all">All categories</option></select>
+      </label>
+      <label class="search-label">Search
+        <input id="filter-search" type="search" placeholder="Description or note…">
+      </label>
+      <span class="toolbar-count" id="txn-count"></span>
+    </div>
+    <article class="card">
+      <table class="txn-table">
+        <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Note</th><th class="num">Amount</th><th></th></tr></thead>
+        <tbody id="txn-body"></tbody>
+      </table>
+      <p id="txn-empty" class="empty hidden">Nothing matches. Try a different filter, or add a transaction.</p>
+    </article>
+    <p class="fineprint">Sample entries are marked <span class="pill pill-sample">sample</span>. “Clear sample data” removes only those — your own entries are never touched. Everything is stored in this browser only (localStorage); nothing leaves your device.</p>
+  </section>
+
+  <!-- ============ BUDGETS ============ -->
+  <section id="view-budgets" class="view" aria-label="Budgets">
+    <div class="page-head">
+      <div>
+        <h1>Monthly budgets</h1>
+        <p class="lede">Set a monthly limit per category. Bars turn amber at 80% and red when you go over.</p>
+      </div>
+    </div>
+    <div id="budget-detail" class="budget-list"></div>
+    <article class="card">
+      <h2>Set or change a budget</h2>
+      <form id="budget-form" class="inline-form">
+        <label>Category
+          <select id="budget-category" name="category"></select>
+        </label>
+        <label>Monthly limit ($)
+          <input id="budget-amount" name="amount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="300.00" required>
+        </label>
+        <button type="submit" class="btn btn-primary">Save budget</button>
+        <button type="button" id="budget-remove" class="btn">Remove budget</button>
+      </form>
+    </article>
+  </section>
+
+  <!-- ============ GOALS ============ -->
+  <section id="view-goals" class="view" aria-label="Savings goals">
+    <div class="page-head">
+      <div>
+        <h1>Savings goals</h1>
+        <p class="lede">Name it, set the target, watch the bar fill up as you save.</p>
+      </div>
+      <div class="head-actions">
+        <button id="add-goal-btn" type="button" class="btn btn-primary">+ New goal</button>
+      </div>
+    </div>
+    <div id="goal-list" class="goal-grid"></div>
+    <article class="card">
+      <h2>How goals work</h2>
+      <p class="muted">Goals are funded by money you set aside — add to a goal when you move money into savings. The total across all goals is shown on the dashboard. Goals and their progress are saved in this browser, just like your transactions.</p>
+    </article>
+  </section>
+
+  <footer class="site-footer">
+    <p>Ledgerly — a private household budget dashboard. Built by <strong>AIONAGENT</strong>. Your data never leaves this browser.</p>
+    <p><a href="#dashboard" data-nav="dashboard">Dashboard</a> · <a href="#transactions" data-nav="transactions">Transactions</a> · <a href="#budgets" data-nav="budgets">Budgets</a> · <a href="#goals" data-nav="goals">Goals</a></p>
+  </footer>
+</main>
+
+<!-- Transaction dialog -->
+<dialog id="txn-dialog" class="dialog">
+  <form id="txn-form" method="dialog">
+    <h2 id="txn-dialog-title">Add transaction</h2>
+    <input type="hidden" id="txn-id">
+    <div class="form-grid">
+      <label>Type
+        <select id="txn-type" name="type">
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+        </select>
+      </label>
+      <label>Amount ($)
+        <input id="txn-amount" name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required>
+      </label>
+      <label>Date
+        <input id="txn-date" name="date" type="date" required>
+      </label>
+      <label>Category
+        <select id="txn-category" name="category"></select>
+      </label>
+      <label class="span-2">Description
+        <input id="txn-desc" name="description" type="text" maxlength="80" placeholder="e.g. Weekly groceries" required>
+      </label>
+      <label class="span-2">Note <span class="optional">(optional)</span>
+        <input id="txn-note" name="note" type="text" maxlength="120" placeholder="e.g. Market on 5th Ave">
+      </label>
+    </div>
+    <p id="txn-error" class="form-error hidden" role="alert"></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" id="txn-cancel">Cancel</button>
+      <button type="submit" class="btn btn-primary" id="txn-save">Save transaction</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Goal dialog -->
+<dialog id="goal-dialog" class="dialog">
+  <form id="goal-form" method="dialog">
+    <h2 id="goal-dialog-title">New savings goal</h2>
+    <input type="hidden" id="goal-id">
+    <div class="form-grid">
+      <label class="span-2">Goal name
+        <input id="goal-name" name="name" type="text" maxlength="60" placeholder="e.g. Emergency fund" required>
+      </label>
+      <label>Target ($)
+        <input id="goal-target" name="target" type="number" min="1" step="0.01" inputmode="decimal" placeholder="5000.00" required>
+      </label>
+      <label>Saved so far ($)
+        <input id="goal-saved" name="saved" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required>
+      </label>
+      <label class="span-2">Target date <span class="optional">(optional)</span>
+        <input id="goal-date" name="date" type="date">
+      </label>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn" id="goal-cancel">Cancel</button>
+      <button type="submit" class="btn btn-primary">Save goal</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
